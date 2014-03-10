@@ -46,7 +46,7 @@
 #define FALSE 			0
 #define EPOLL_QUEUE_LEN	256
 #define BUFLEN			80
-#define SERVER_PORT		7000
+#define SERVER_PORT		80
 
 typedef struct {
 	int epoll_fd;
@@ -68,13 +68,11 @@ void setupListenSocket(int);
 int handleError(int * i);
 void setupFD(struct epoll_event * event);
 int handleConnection(struct epoll_event * event, int * i);
-void handleData(int * i);
 
-void connectToWebserver()
+void connectToWebserver(struct epoll_event * event)
 {
     struct hostent *hp;
 	struct sockaddr_in server;
-	char  *host;
 
     if ((websocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	{
@@ -82,22 +80,25 @@ void connectToWebserver()
 		exit(1);
 	}
     
-    bzero((char *)server, sizeof(struct sockaddr_in));
-	server->sin_family = AF_INET;
-	server->sin_port = htons(80);
-	if ((hp = gethostbyname(host)) == NULL)
+    bzero((char *)&server, sizeof(struct sockaddr_in));
+	server.sin_family = AF_INET;
+	server.sin_port = htons(80);
+	if ((hp = gethostbyname("192.168.0.18")) == NULL)
 	{
 		fprintf(stderr, "Unknown server address\n");
 		exit(1);
 	}
-	bcopy(hp->h_addr, (char *)&server->sin_addr, hp->h_length);
+	bcopy(hp->h_addr, (char *)&server.sin_addr, hp->h_length);
     
-	if (connect (*sd, (struct sockaddr *)server, sizeof(*server)) == -1)
+	if (connect (websocket, (struct sockaddr *)&server, sizeof(server)) == -1)
 	{
 		fprintf(stderr, "Can't connect to server\n");
 		perror("connect");
 		exit(1);
 	}
+
+	if (epoll_ctl (info.epoll_fd, EPOLL_CTL_ADD, websocket, event) == -1) 
+		SystemFatal ("epoll_ctl");
 
 }
 
@@ -125,12 +126,10 @@ int main (int argc, char* argv[])
 	static struct epoll_event event;
 	int port = SERVER_PORT;
 
-
-    connectToWebserver();
-
     setupSignal();
 	setupListenSocket(port);
 	setupFD(&event);
+    connectToWebserver(&event);
     
 	// Execute the epoll event loop
 	while (TRUE) 
@@ -150,7 +149,7 @@ int main (int argc, char* argv[])
     		if (handleConnection(&event, &i))
     			continue;
 			
-			handleData(&i);
+			//handleData(&i);
 		}
 	}
 	close(fd_server);
@@ -331,8 +330,9 @@ int handleConnection(struct epoll_event * event, int * i)
 	{
 		//socklen_t addr_size = sizeof(remote_addr);
 		fd_new = accept (fd_server, (struct sockaddr*) &remote_addr, &addr_size);
+        printf("accepting new connection\n");
 		if (fd_new == -1) 
-		{
+		{    
 			if (errno != EAGAIN && errno != EWOULDBLOCK) 
 			{
 				perror("accept");
@@ -345,6 +345,7 @@ int handleConnection(struct epoll_event * event, int * i)
 			SystemFatal("fcntl");
 		
 		// Add the new socket descriptor to the epoll loop
+        printf("addong to loop\n");
 		event->data.fd = fd_new;
 		if (epoll_ctl (info.epoll_fd, EPOLL_CTL_ADD, fd_new, event) == -1) 
 			SystemFatal ("epoll_ctl");
@@ -404,7 +405,7 @@ void handleData(int * i)
 static int ClearSocket (int fd) 
 {
 	int	n, bytes_to_read;
-	char	*bp, buf[BUFLEN];
+	char *bp, buf[BUFLEN];
 
 	bp = buf;
 	bytes_to_read = BUFLEN;
@@ -423,7 +424,7 @@ static int ClearSocket (int fd)
 
     	if (n > 0)
         {
-            send (fd, buf, BUFLEN, 0);
+            send (websocket, buf, BUFLEN, 0);
         }
     } while (n > 0);
     return FALSE;
