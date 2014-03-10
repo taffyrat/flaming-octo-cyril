@@ -6,7 +6,6 @@
 --	FUNCTIONS:		static void SystemFatal (const char* message)
 --					static int ClearSocket (int fd)
 --					void close_fd (int)
---					void updateStats()
 --					void handleData(int*)
 --					void setupSignal()
 --					void setupListenSocket(int)
@@ -56,16 +55,12 @@ typedef struct {
 
 //Globals
 int fd_server;
-int connected;
-int servicing;
-int finished;
 epollWrapper info;
 
 // Function prototypes
 static void SystemFatal (const char* message);
 static int ClearSocket (int fd);
 void close_fd (int);
-void updateStats();
 void handleData(int*);
 void setupSignal();
 void setupListenSocket(int);
@@ -98,9 +93,6 @@ int main (int argc, char* argv[])
 	int num_fds;
 	static struct epoll_event event;
 	int port = SERVER_PORT;
-    connected = 0;
-    servicing = 0;
-    finished  = 0;
 
     setupSignal();
    
@@ -116,7 +108,6 @@ int main (int argc, char* argv[])
 		if (num_fds < 0) 
 			SystemFatal ("Error in epoll_wait!");
 
-		updateStats();
 		for (i = 0; i < num_fds; i++) 
 		{
     		// Case 1: Error condition
@@ -295,7 +286,7 @@ int handleError(int * i)
 --
 --  RETURNS:  int - 1 if a client connects, zero otherwise.
 --
---  NOTES:Handles connections in the event loop for epoll
+--  NOTES:    Handles connections in the event loop for epoll
 --  
 ------------------------------------------------------------------------------*/
 int handleConnection(struct epoll_event * event, int * i)
@@ -326,8 +317,6 @@ int handleConnection(struct epoll_event * event, int * i)
 		if (epoll_ctl (info.epoll_fd, EPOLL_CTL_ADD, fd_new, event) == -1) 
 			SystemFatal ("epoll_ctl");
 		
-		//printf(" Remote Address:  %s\n", inet_ntoa(remote_addr.sin_addr));
-		connected++;
 		return 1;
 	}
 
@@ -358,34 +347,8 @@ void handleData(int * i)
 	{
 		// epoll will remove the fd from its set
 		// automatically when the fd is closed
-		finished++;
 		close (info.events[*i].data.fd);
 	}
-}
-
-/*------------------------------------------------------------------------------
---
---  FUNCTION:    updateStats
---
---  DATE:       February 15, 2014
---
---  DESIGNERS:  Jacob Miner  
---
---  PROGRAMMER: Jacob Miner 
---
---  INTERFACE:  updateStats()
---
---  RETURNS:  void
---
---  NOTES: Prints the current stats of the connections 
---  
-------------------------------------------------------------------------------*/
-void updateStats()
-{
-	printf("\033[2J\n");
-	printf("total connections %d\n", connected);
-	printf("servicing %d\n", connected - finished);
-	printf("finished %d\n", finished);
 }
 
 /*------------------------------------------------------------------------------
