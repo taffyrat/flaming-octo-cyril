@@ -24,6 +24,8 @@ IPADDR = 0
 FORPORT = 1
 SRCPORT = 2
 
+running = True
+
 # -----------------------------------------------------------------------------
 # This function will create two threads: one thread to send data read in from
 # the outside to the inside host and another thread to send data read in from
@@ -129,9 +131,10 @@ def readConfig():
 # -----------------------------------------------------------------------------
 def forwardPackets(readSocket, writeSocket):
     BUFSIZE = 1024
+    global running
 
     # Enter in a loop to try and read from the readSocket. Anything that is read should be immediately send to the writeSocket.
-    while True:
+    while running:
         # In non-blocking mode an exception is raised if there is nothing to read.
         try:
             # Read in a maximum BUFSIZE amount of data.
@@ -174,6 +177,8 @@ def forwardPackets(readSocket, writeSocket):
 # @return    No return.
 # -----------------------------------------------------------------------------
 def portForward(internalHostIP, sourcePort, destinationPort):
+    global running
+
     # Create a listening socket on the specified port to listen for incoming connections.
     listenSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listenSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -181,7 +186,7 @@ def portForward(internalHostIP, sourcePort, destinationPort):
     listenSocket.listen(1)
 
     # Enter a loop to listen and accept new incoming connections.
-    while True:
+    while running:
         # Block on listening for a new connection.
         externalSocket, externalHostAddress = listenSocket.accept()
         externalSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -196,20 +201,20 @@ def portForward(internalHostIP, sourcePort, destinationPort):
 
         # Continue loop to listen for new connections.
 
+    print "exiting"
     listenSocket.close()
 
-def closeSockets():
-    #global listenSocket
-    #listenSocket.close()
-    #exit()
-    print "lol"
-    sys.exit(0)
+def closeSockets(signal, frame):
+    global running 
+    print "wtfbbq"
+    running = False
+    sys.exit()
 
 ######################
 # Program Start
 ######################
 threads = []
-#signal.signal(signal.SIGINT, closeSockets)
+signal.signal(signal.SIGINT, closeSockets)
 services = readConfig()
 for i in services:
     newThread = threading.Thread(target=portForward,args=(services[i][IPADDR], int(services[i][SRCPORT]), int(services[i][FORPORT])),)
@@ -220,6 +225,4 @@ try:
     while(True):
         pass    
 except KeyboardInterrupt:
-    for thread in threads:
-        thread.stop()
-
+    pass
