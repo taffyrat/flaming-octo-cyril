@@ -18,6 +18,11 @@ import socket
 import threading
 import sys
 import errno
+import signal
+
+IPADDR = 0
+FORPORT = 1
+SRCPORT = 2
 
 # -----------------------------------------------------------------------------
 # This function will create two threads: one thread to send data read in from
@@ -44,6 +49,75 @@ def createForwardingThreads(externalSocket, internalSocket):
                                                 args=(internalSocket, externalSocket),
                                                 )
     internalToExternalThread.start()
+
+"""
+/*------------------------------------------------------------------------------
+--
+--  FUNCTION:   stripWhitspace
+--
+--  DATE:       March 12, 2014
+--
+--  DESIGNERS:  Jacob Miner  
+--
+--  PROGRAMMER: Jacob Miner 
+--
+--  INTERFACE: stripWhitspace(text)
+--                              text - the string to strip the whitespace from
+--
+--  RETURNS:  temp - the string without any whitespace.
+--
+--  NOTES:  Strips whitespace from text, on both sides of the string
+--  
+------------------------------------------------------------------------------*/
+"""
+def stripWhitspace(text):
+    temp = text.rstrip()
+    temp = temp.lstrip()
+    return temp
+
+# ----------------------------------------------------------------------------
+# 
+#   FUNCTION:   readConfig
+# 
+#   DATE:       March 12, 2014
+# 
+#   DESIGNERS:  Jacob Miner  
+# 
+#   PROGRAMMER: Jacob Miner 
+# 
+#   INTERFACE: readConfig()
+# 
+#   RETURNS:  services - a list of user-defined services to check
+# 
+#   NOTES:  Reads the config file, passing each parsable line to checkLine.
+#   
+# ----------------------------------------------------------------------------
+def readConfig():
+    services = {}
+    currentService = ""
+    currentIP = "" 
+    currentFPort = ""
+    currentSPort = ""
+
+    with open("config.ini") as f:
+        for line in f:
+            if line.startswith("#"):
+                continue
+            else:
+                line = stripWhitspace(line)
+                temp = line.split("=")
+                if temp[0] == "service":
+                    currentService = temp[1]
+                elif temp[0] == "ipAddress":
+                    currentIP = temp[1]
+                elif temp[0] == "forwardPort":
+                    currentFPort = temp[1]
+                elif temp[0] == "srcPort":
+                    currentSPort = temp[1]
+                    services[currentService] = (currentIP, currentFPort, currentSPort)
+
+    return services 
+
 
 # -----------------------------------------------------------------------------
 # This function will constantly try and read from the readSocket. Anything that
@@ -110,10 +184,12 @@ def portForward(internalHostIP, sourcePort, destinationPort):
     while True:
         # Block on listening for a new connection.
         externalSocket, externalHostAddress = listenSocket.accept()
+        externalSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # Create a new connection to our internal host.
         internalSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         internalSocket.connect((internalHostIP, destinationPort))
+        internalSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # Create new threads to handle the forwarding from ext->int and from int->ext.
         createForwardingThreads(externalSocket, internalSocket)
@@ -122,10 +198,28 @@ def portForward(internalHostIP, sourcePort, destinationPort):
 
     listenSocket.close()
 
+def closeSockets():
+    #global listenSocket
+    #listenSocket.close()
+    #exit()
+    print "lol"
+    sys.exit(0)
+
 ######################
 # Program Start
 ######################
+threads = []
+#signal.signal(signal.SIGINT, closeSockets)
+services = readConfig()
+for i in services:
+    newThread = threading.Thread(target=portForward,args=(services[i][IPADDR], int(services[i][SRCPORT]), int(services[i][FORPORT])),)
+    threads.append(newThread)
+    newThread.start()
 
-sshThread = threading.Thread(target=portForward,args=('192.168.0.19', 22, 22),).start()
-httpdThread = threading.Thread(target=portForward,args=('192.168.0.19', 80, 80),).start()
+try: 
+    while(True):
+        pass    
+except KeyboardInterrupt:
+    for thread in threads:
+        thread.stop()
 
