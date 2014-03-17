@@ -94,14 +94,16 @@ def forwardPackets(readSocket, writeSocket):
 # any new connection to forward between the internal host given.
 #
 # @params     internalHostIP - The IP address of the host to forward the port to.
-#            port - The port to listen on and forward.
+#            sourcePort - The port to listen on at the Port Forwarer.
+#            destinationPort - The port on the internal server that we are forwarding
+#                              packets to.
 # @return    No return.
 # -----------------------------------------------------------------------------
-def portForward(internalHostIP, port):
+def portForward(internalHostIP, sourcePort, destinationPort):
     # Create a listening socket on the specified port to listen for incoming connections.
     listenSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listenSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listenSocket.bind(('', port))
+    listenSocket.bind(('', sourcePort))
     listenSocket.listen(1)
 
     # Enter a loop to listen and accept new incoming connections.
@@ -111,7 +113,7 @@ def portForward(internalHostIP, port):
 
         # Create a new connection to our internal host.
         internalSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        internalSocket.connect((internalHostIP, port))
+        internalSocket.connect((internalHostIP, destinationPort))
 
         # Create new threads to handle the forwarding from ext->int and from int->ext.
         createForwardingThreads(externalSocket, internalSocket)
@@ -124,6 +126,6 @@ def portForward(internalHostIP, port):
 # Program Start
 ######################
 
-sshThread = threading.Thread(target=portForward,args=('192.168.0.19', 22),).start()
-httpdThread = threading.Thread(target=portForward,args=('192.168.0.19', 80),).start()
+sshThread = threading.Thread(target=portForward,args=('192.168.0.19', 22, 22),).start()
+httpdThread = threading.Thread(target=portForward,args=('192.168.0.19', 80, 80),).start()
 
