@@ -44,12 +44,14 @@ def createForwardingThreads(externalSocket, internalSocket):
     externalToInternalThread = threading.Thread(target=forwardPackets,
                                                 args=(externalSocket, internalSocket),
                                                 )
+    externalToInternalThread.daemon = True
     externalToInternalThread.start()
 
     # Create the internal -> external forwarding thread.
     internalToExternalThread = threading.Thread(target=forwardPackets,
                                                 args=(internalSocket, externalSocket),
                                                 )
+    internalToExternalThread.daemon = True
     internalToExternalThread.start()
 
 """
@@ -204,25 +206,20 @@ def portForward(internalHostIP, sourcePort, destinationPort):
     print "exiting"
     listenSocket.close()
 
-def closeSockets(signal, frame):
-    global running 
-    print "wtfbbq"
-    running = False
-    sys.exit()
-
 ######################
 # Program Start
 ######################
 threads = []
-signal.signal(signal.SIGINT, closeSockets)
 services = readConfig()
 for i in services:
     newThread = threading.Thread(target=portForward,args=(services[i][IPADDR], int(services[i][SRCPORT]), int(services[i][FORPORT])),)
+    newThread.daemon = True
     threads.append(newThread)
     newThread.start()
 
-try: 
+try:
     while(True):
         pass    
-except KeyboardInterrupt:
-    pass
+except (KeyboardInterrupt, SystemExit):
+    running = False
+    sys.exit()
