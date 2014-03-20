@@ -96,14 +96,14 @@ def stripWhitspace(text):
 #   NOTES:  Reads the config file, passing each parsable line to checkLine.
 #   
 # ----------------------------------------------------------------------------
-def readConfig():
+def readConfig(protocol):
     services = {}
     currentService = ""
     currentIP = "" 
     currentFPort = ""
     currentSPort = ""
 
-    with open("config.ini") as f:
+    with open(protocol + "config.ini") as f:
         for line in f:
             if line.startswith("#"):
                 continue
@@ -210,9 +210,16 @@ def portForward(internalHostIP, sourcePort, destinationPort):
 # Program Start
 ######################
 threads = []
-services = readConfig()
-for i in services:
-    newThread = threading.Thread(target=portForward,args=(services[i][IPADDR], int(services[i][SRCPORT]), int(services[i][FORPORT])),)
+TCPservices = readConfig("TCP")
+UDPservices = readConfig("UDP")
+for i in TCPservices:
+    newThread = threading.Thread(target=portForward,args=(TCPservices[i][IPADDR], int(TCPservices[i][SRCPORT]), int(TCPservices[i][FORPORT])),)
+    newThread.daemon = True
+    threads.append(newThread)
+    newThread.start()
+
+for i in UDPservices:
+    newThread = threading.Thread(target=portForward,args=(TCPservices[i][IPADDR], int(TCPservices[i][SRCPORT]), int(TCPservices[i][FORPORT])),)
     newThread.daemon = True
     threads.append(newThread)
     newThread.start()
