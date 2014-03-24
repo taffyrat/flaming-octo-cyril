@@ -103,7 +103,7 @@ def readConfig(protocol):
     currentFPort = ""
     currentSPort = ""
 
-    with open(protocol + "Config.ini") as f:
+    with open(protocol + "config.ini") as f:
         for line in f:
             if line.startswith("#"):
                 continue
@@ -210,8 +210,8 @@ def portForward(internalHostIP, sourcePort, destinationPort):
 # Program Start
 ######################
 threads = []
-TCPservices = readConfig("tcp")
-UDPservices = readConfig("udp")
+TCPservices = readConfig("TCP")
+UDPservices = readConfig("UDP")
 for i in TCPservices:
     newThread = threading.Thread(target=portForward,args=(TCPservices[i][IPADDR], int(TCPservices[i][SRCPORT]), int(TCPservices[i][FORPORT])),)
     newThread.daemon = True
