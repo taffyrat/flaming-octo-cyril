@@ -54,26 +54,25 @@ def createForwardingThreads(externalSocket, internalSocket):
     internalToExternalThread.daemon = True
     internalToExternalThread.start()
 
-"""
-/*------------------------------------------------------------------------------
---
---  FUNCTION:   stripWhitspace
---
---  DATE:       March 12, 2014
---
---  DESIGNERS:  Jacob Miner  
---
---  PROGRAMMER: Jacob Miner 
---
---  INTERFACE: stripWhitspace(text)
---                              text - the string to strip the whitespace from
---
---  RETURNS:  temp - the string without any whitespace.
---
---  NOTES:  Strips whitespace from text, on both sides of the string
---  
-------------------------------------------------------------------------------*/
-"""
+
+# -----------------------------------------------------------------------------
+#
+#  FUNCTION:   stripWhitspace
+#
+#  DATE:       March 12, 2014
+#
+#  DESIGNERS:  Jacob Miner  
+#
+#  PROGRAMMER: Jacob Miner 
+#
+#  INTERFACE: stripWhitspace(text)
+#                              text - the string to strip the whitespace from
+#
+#  RETURNS:  temp - the string without any whitespace.
+#
+#  NOTES:  Strips whitespace from text, on both sides of the string
+#  
+# ----------------------------------------------------------------------------
 def stripWhitspace(text):
     temp = text.rstrip()
     temp = temp.lstrip()
@@ -166,7 +165,6 @@ def forwardPackets(readSocket, writeSocket):
             else:
                 print("Error occured on recv: {0}".format(e))
                 break
-#                time.sleep(1)           # short delay, no tight loops
 
 # -----------------------------------------------------------------------------
 # This function creates a listening socket on the specified port and sets up
