@@ -199,9 +199,11 @@ def portForward(internalHostIP, sourcePort, destinationPort):
         # Create new threads to handle the forwarding from ext->int and from int->ext.
         createForwardingThreads(externalSocket, internalSocket)
 
+        # Logging
+        print "New tunnel from port {0} to {1}:{2} created for {3}".format(sourcePort, internalHostIP, destinationPort, externalHostAddress)
+
         # Continue loop to listen for new connections.
 
-    print "exiting"
     listenSocket.close()
 
 ######################
@@ -214,6 +216,9 @@ for i in services:
     newThread.daemon = True
     threads.append(newThread)
     newThread.start()
+
+    # Logging
+    print "Service \"{0}\" is now forwarding from port {1} to {2}:{3}".format(i, services[i][SRCPORT], services[i][IPADDR], services[i][FORPORT])
 
 try:
     while(True):
